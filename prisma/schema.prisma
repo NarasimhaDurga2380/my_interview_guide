@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TechCategory {
+  LANGUAGE
+  FRAMEWORK
+  LIBRARY
+  TOOLING
+  CONCEPT
+}
+
+enum Difficulty {
+  FOUNDATIONAL
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum PracticeKind {
+  MCQ
+  PREDICT_OUTPUT
+  CODING
+}
+
+/// A language, framework, library or discipline. Container for topics.
+model Tech {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  category    TechCategory
+  description String
+  icon        String?
+  position    Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  topics Topic[]
+
+  @@index([category, position])
+}
+
+/// One learnable unit. Always owns the five sections.
+model Topic {
+  id         String     @id @default(cuid())
+  slug       String
+  techId     String
+  title      String
+  summary    String
+  difficulty Difficulty
+  position   Int        @default(0)
+  published  Boolean    @default(false)
+
+  /// DetailSection[]: { heading, body, keyPoints[] }
+  details Json @default("[]")
+  /// { realWorld, genericExample, code? }
+  analogy Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tech          Tech           @relation(fields: [techId], references: [id], onDelete: Cascade)
+  tags          Tag[]          @relation("TopicTags")
+  questions     Question[]
+  snippets      Snippet[]
+  practiceItems PracticeItem[]
+
+  prerequisites  Topic[] @relation("TopicPrerequisites")
+  prerequisiteOf Topic[] @relation("TopicPrerequisites")
+  related        Topic[] @relation("TopicRelated")
+  relatedTo      Topic[] @relation("TopicRelated")
+
+  @@unique([techId, slug])
+  @@index([difficulty])
+  @@index([published, position])
+}
+
+model Tag {
+  id     String  @id @default(cuid())
+  slug   String  @unique
+  label  String
+  topics Topic[] @relation("TopicTags")
+}
+
+/// Section 2: interview questions with model answers.
+model Question {
+  id          String   @id @default(cuid())
+  topicId     String
+  question    String
+  shortAnswer String
+  explanation String
+  followUps   String[]
+  position    Int      @default(0)
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, position])
+}
+
+/// Section 3: illustrative code snippets.
+model Snippet {
+  id          String  @id @default(cuid())
+  topicId     String
+  title       String
+  language    String  @default("typescript")
+  code        String
+  explanation String
+  pitfall     String?
+  position    Int     @default(0)
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, position])
+}
+
+/// Section 4: self-assessment items, also used by mixed practice sessions.
+model PracticeItem {
+  id          String       @id @default(cuid())
+  topicId     String
+  kind        PracticeKind
+  prompt      String
+  /// Choices for MCQ, empty for other kinds.
+  options     String[]
+  answer      String
+  explanation String
+  starterCode String?
+  difficulty  Difficulty   @default(INTERMEDIATE)
+  position    Int          @default(0)
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, position])
+  @@index([kind, difficulty])
+}

@@ -1,0 +1,58 @@
+{
+  "name": "my-interview-preparation",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node --use-system-ca node_modules/next/dist/bin/next dev",
+    "build": "prisma generate && next build",
+    "start": "node --use-system-ca node_modules/next/dist/bin/next start",
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.12",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/lang-sql": "^6.10.0",
+    "@hookform/resolvers": "^5.9.1",
+    "@mdxeditor/editor": "^4.2.4",
+    "@neon/config": "^1.8.2",
+    "@neon/env": "^1.4.7",
+    "@neondatabase/auth": "^0.5.0-beta",
+    "@neondatabase/auth-ui": "^0.3.0-beta",
+    "@openrouter/ai-sdk-provider": "^3.0.0",
+    "@prisma/client": "^6.2.1",
+    "@uiw/react-codemirror": "^4.25.11",
+    "ai": "^7.0.94",
+    "next": "16.3.4",
+    "prettier": "^3.9.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-hook-form": "^7.87.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "prisma": "^6.2.1",
+    "tailwindcss": "^4",
+    "tsx": "^4.19.2",
+    "typescript": "^5"
+  }
+}
