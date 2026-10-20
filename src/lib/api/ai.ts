@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateObject } from "ai";
+import { generateObject, NoObjectGeneratedError } from "ai";
 import { format } from "prettier";
 import {
   generateSectionResultSchemas,
@@ -18,40 +18,58 @@ type OpenRouterModel = {
   supported_parameters?: string[];
 };
 
-let cachedModelId: Promise<string> | null = null;
+let cachedModelIds: Promise<string[]> | null = null;
 
 /// Picks a currently-live free OpenRouter model instead of a hardcoded slug that can 404 when deprecated.
-async function resolveFreeModelId() {
+async function resolveFreeModelIds() {
+  let data: OpenRouterModel[];
   try {
     const res = await fetch("https://openrouter.ai/api/v1/models");
     if (!res.ok) throw new Error("OpenRouter model list unavailable");
 
-    const { data } = (await res.json()) as { data: OpenRouterModel[] };
-    const freeModels = data.filter(
-      (m) => m.id.endsWith(":free") && m.pricing?.prompt === "0" && m.pricing?.completion === "0"
-    );
-
-    // Prefer models that advertise structured/JSON output support, since generateObject relies on it.
-    const structured = freeModels.filter((m) =>
-      m.supported_parameters?.some((p) => p === "structured_outputs" || p === "response_format")
-    );
-    const candidates = structured.length > 0 ? structured : freeModels;
-
-    const configured = process.env.OPENROUTER_MODEL;
-    if (configured && candidates.some((model) => model.id === configured)) return configured;
-
-    const best = candidates.sort((a, b) => (b.context_length ?? 0) - (a.context_length ?? 0))[0];
-    if (best) return best.id;
+    ({ data } = (await res.json()) as { data: OpenRouterModel[] });
   } catch {
-    throw new Error("OpenRouter did not return an available free model. Check the API key or try again.");
+    throw new Error("OpenRouter could not provide its model list. Check your network connection and try again.");
   }
 
-  throw new Error("OpenRouter has no currently available free models.");
+  const candidates = data
+    .filter(
+      (model) =>
+        model.id.endsWith(":free") &&
+        model.pricing?.prompt === "0" &&
+        model.pricing?.completion === "0" &&
+        model.supported_parameters?.includes("structured_outputs")
+    )
+    .sort((a, b) => (b.context_length ?? 0) - (a.context_length ?? 0));
+
+  const configured = process.env.OPENROUTER_MODEL;
+  const preferred = candidates.find((model) => model.id === configured);
+  const ordered = preferred
+    ? [preferred, ...candidates.filter((model) => model.id !== preferred.id)]
+    : candidates;
+
+  if (ordered.length === 0) {
+    throw new Error("OpenRouter has no currently available free models that support structured output.");
+  }
+
+  return ordered.map((model) => model.id);
 }
 
-async function getModel() {
-  cachedModelId ??= resolveFreeModelId();
-  return openrouter(await cachedModelId);
+async function generateObjectWithFallback<T>(generate: (modelId: string) => Promise<T>) {
+  cachedModelIds ??= resolveFreeModelIds();
+  const modelIds = (await cachedModelIds).slice(0, 2);
+  let lastError: unknown;
+
+  for (const modelId of modelIds) {
+    try {
+      return await generate(modelId);
+    } catch (error) {
+      if (!NoObjectGeneratedError.isInstance(error)) throw error;
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 const SYSTEM_PROMPT = `You are an experienced developer sharing concise interview notes with another developer.
@@ -70,7 +88,7 @@ Examples:
 - Keep scenarios realistic and restrained. Do not force a story where a small technical example is clearer.
 - Code snippets must contain no comments. Do not include //, /* */, <!-- -->, or # comments in code fields; put any explanation in the explanation or pitfall field instead.
 
-Every topic has five sections that must all be filled with accurate, practical content:
+When drafting a full topic, fill all five sections with accurate, practical content:
 1. details: 2-4 sections, each with a heading, a body paragraph (markdown), and 2-5 concise key points.
 2. questions: 3-5 realistic interview questions that test reasoning about the topic, with a direct short answer, a useful explanation, and natural follow-up questions.
 3. snippets: 1-3 small, runnable code snippets that demonstrate the concept or reveal a non-obvious behavior, with a title, language, explanation, and an optional genuine pitfall. Each snippet must be a complete example with at least 4 meaningful lines of code, not an import-only fragment.
@@ -154,12 +172,14 @@ async function formatGeneratedSnippets<T extends { code: string; language: strin
 export async function generateTopicContent(request: GenerateTopicRequest) {
   requireApiKey();
 
-  const { object } = await generateObject({
-    model: await getModel(),
-    schema: generateTopicResultSchema,
-    system: SYSTEM_PROMPT,
-    prompt: buildPrompt(request),
-  });
+  const { object } = await generateObjectWithFallback((modelId) =>
+    generateObject({
+      model: openrouter(modelId),
+      schema: generateTopicResultSchema,
+      system: SYSTEM_PROMPT,
+      prompt: buildPrompt(request),
+    })
+  );
 
   return generateTopicResultSchema.parse({
     ...object,
@@ -172,12 +192,14 @@ export async function generateTopicContent(request: GenerateTopicRequest) {
 export async function generateTopicSection(request: GenerateTopicRequest & { section: TopicSectionKey }) {
   requireApiKey();
 
-  const { object } = await generateObject({
-    model: await getModel(),
-    schema: generateSectionResultSchemas[request.section],
-    system: `${SYSTEM_PROMPT}\n\n${SECTION_INSTRUCTIONS[request.section]} Return only that section.`,
-    prompt: buildPrompt(request),
-  });
+  const { object } = await generateObjectWithFallback((modelId) =>
+    generateObject({
+      model: openrouter(modelId),
+      schema: generateSectionResultSchemas[request.section],
+      system: `${SYSTEM_PROMPT}\n\n${SECTION_INSTRUCTIONS[request.section]} Return only that section.`,
+      prompt: buildPrompt(request),
+    })
+  );
 
   if (request.section === "practice") {
     const practiceResult = generateSectionResultSchemas.practice.parse(object);
@@ -195,4 +217,3 @@ export async function generateTopicSection(request: GenerateTopicRequest & { sec
 
   return object;
 }
-

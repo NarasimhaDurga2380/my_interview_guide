@@ -17,15 +17,10 @@ function withPosition<T>(items: T[]) {
 }
 
 async function connectTags(tx: Prisma.TransactionClient, tags: string[]) {
-  await Promise.all(
-    tags.map((slug) =>
-      tx.tag.upsert({
-        where: { slug },
-        create: { slug, label: slug.replace(/-/g, " ") },
-        update: {},
-      })
-    )
-  );
+  await tx.tag.createMany({
+    data: tags.map((slug) => ({ slug, label: slug.replace(/-/g, " ") })),
+    skipDuplicates: true,
+  });
   return tags.map((slug) => ({ slug }));
 }
 
@@ -52,7 +47,7 @@ export async function createTopic(input: CreateTopicInput) {
       },
       include: topicInclude,
     });
-  });
+  }, { timeout: 15_000 });
 }
 
 export async function updateTopic(techSlug: string, topicSlug: string, input: UpdateTopicInput) {
@@ -66,10 +61,6 @@ export async function updateTopic(techSlug: string, topicSlug: string, input: Up
       ? await tx.tech.findUniqueOrThrow({ where: { slug: input.techSlug } })
       : sourceTech;
 
-    // A provided section is a full replacement, so drop the old rows first.
-    if (input.questions) await tx.question.deleteMany({ where: { topicId: existing.id } });
-    if (input.snippets) await tx.snippet.deleteMany({ where: { topicId: existing.id } });
-    if (input.practice) await tx.practiceItem.deleteMany({ where: { topicId: existing.id } });
     return tx.topic.update({
       where: { id: existing.id },
       data: {
@@ -89,11 +80,17 @@ export async function updateTopic(techSlug: string, topicSlug: string, input: Up
         related: input.related
           ? { set: input.related.map((slug) => ({ techId_slug: { techId: targetTech.id, slug } })) }
           : undefined,
-        questions: input.questions ? { create: withPosition(input.questions) } : undefined,
-        snippets: input.snippets ? { create: withPosition(input.snippets) } : undefined,
-        practiceItems: input.practice ? { create: withPosition(input.practice) } : undefined,
+        questions: input.questions
+          ? { deleteMany: {}, create: withPosition(input.questions) }
+          : undefined,
+        snippets: input.snippets
+          ? { deleteMany: {}, create: withPosition(input.snippets) }
+          : undefined,
+        practiceItems: input.practice
+          ? { deleteMany: {}, create: withPosition(input.practice) }
+          : undefined,
       },
       include: topicInclude,
     });
-  });
+  }, { timeout: 15_000 });
 }
