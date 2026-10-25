@@ -57,6 +57,14 @@ const snippet = z.object({
   pitfall: z.string().nullish(),
 });
 
+const resource = z.object({
+  title: z.string().min(1).max(200),
+  url: z.string().url().refine((value) => /^https?:\/\//i.test(value), {
+    message: "Must be an HTTP or HTTPS URL",
+  }),
+  description: z.string().max(1000).nullish(),
+});
+
 const practiceItemBase = z.object({
   kind: practiceKind,
   prompt: z.string().min(1),
@@ -98,6 +106,7 @@ export const createTopicSchema = z.object({
   analogy: analogy.nullish(),
   questions: z.array(question).default([]),
   snippets: z.array(snippet).default([]),
+  resources: z.array(resource).default([]),
   practice: z.array(practiceItem).min(1),
 });
 
@@ -176,4 +185,3 @@ export type GenerateTopicResult = z.infer<typeof generateTopicResultSchema>;
 export type GenerateSectionResult = {
   [K in TopicSectionKey]: z.infer<(typeof generateSectionResultSchemas)[K]>;
 };
-

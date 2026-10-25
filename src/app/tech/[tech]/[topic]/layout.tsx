@@ -55,6 +55,7 @@ export default async function TopicLayout({
           details: (topic.details as unknown[]).length,
           questions: topic.questions.length,
           snippets: topic.snippets.length,
+          resources: topic.resources.length,
           practice: topic.practiceItems.length,
         }}
       />

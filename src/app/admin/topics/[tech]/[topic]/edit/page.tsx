@@ -47,6 +47,7 @@ export default async function EditTopicPage({
       followUps,
     })),
     snippets,
+    resources: topic.resources.map(({ title, url, description }) => ({ title, url, description })),
     practice: topic.practiceItems.map(
       ({ kind, prompt, options, answer, explanation, starterCode, difficulty }) => ({
         kind,

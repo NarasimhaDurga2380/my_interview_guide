@@ -7,6 +7,7 @@ export const topicInclude = {
   tags: { select: { slug: true, label: true } },
   questions: { orderBy: { position: "asc" } },
   snippets: { orderBy: { position: "asc" } },
+  resources: { orderBy: { position: "asc" } },
   practiceItems: { orderBy: { position: "asc" } },
   prerequisites: { select: { slug: true, title: true } },
   related: { select: { slug: true, title: true } },
@@ -43,6 +44,7 @@ export async function createTopic(input: CreateTopicInput) {
         related: { connect: input.related.map((slug) => ({ techId_slug: { techId: tech.id, slug } })) },
         questions: { create: withPosition(input.questions) },
         snippets: { create: withPosition(input.snippets) },
+        resources: { create: withPosition(input.resources) },
         practiceItems: { create: withPosition(input.practice) },
       },
       include: topicInclude,
@@ -85,6 +87,9 @@ export async function updateTopic(techSlug: string, topicSlug: string, input: Up
           : undefined,
         snippets: input.snippets
           ? { deleteMany: {}, create: withPosition(input.snippets) }
+          : undefined,
+        resources: input.resources
+          ? { deleteMany: {}, create: withPosition(input.resources) }
           : undefined,
         practiceItems: input.practice
           ? { deleteMany: {}, create: withPosition(input.practice) }

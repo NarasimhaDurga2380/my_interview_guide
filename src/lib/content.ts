@@ -2,7 +2,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { topicInclude } from "@/lib/api/topic-service";
 
-export const SECTIONS = ["details", "questions", "snippets", "practice", "analogy"] as const;
+export const SECTIONS = ["details", "questions", "snippets", "resources", "practice", "analogy"] as const;
 
 export type Section = (typeof SECTIONS)[number];
 
@@ -10,6 +10,7 @@ export const SECTION_LABELS: Record<Section, string> = {
   details: "Details",
   questions: "Questions",
   snippets: "Code snippets",
+  resources: "Resources",
   practice: "Practice",
   analogy: "Analogy",
 };

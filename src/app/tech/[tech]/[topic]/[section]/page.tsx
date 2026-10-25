@@ -144,6 +144,29 @@ function Snippets({ topic }: { topic: TopicDetail }) {
   );
 }
 
+function Resources({ topic }: { topic: TopicDetail }) {
+  if (topic.resources.length === 0) return <EmptyState label="resources" />;
+
+  return (
+    <ul className="space-y-4">
+      {topic.resources.map((resource) => (
+        <li key={resource.id} className="border border-slate-200 p-5">
+          <a
+            href={resource.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-amber-700 hover:underline"
+          >
+            {resource.title}
+          </a>
+          {resource.description && <p className="mt-2 text-sm leading-7 text-slate-600">{resource.description}</p>}
+          <p className="mt-2 break-all text-xs text-slate-400">{resource.url}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Practice({ topic }: { topic: TopicDetail }) {
   if (topic.practiceItems.length === 0) return <EmptyState label="practice questions" />;
   return <PracticeList items={topic.practiceItems} />;
@@ -183,6 +206,7 @@ const RENDERERS: Record<Section, (props: { topic: TopicDetail }) => React.ReactN
   details: Details,
   questions: Questions,
   snippets: Snippets,
+  resources: Resources,
   practice: Practice,
   analogy: AnalogyView,
 };

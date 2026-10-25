@@ -68,6 +68,7 @@ model Topic {
   questions     Question[]
   snippets      Snippet[]
   practiceItems PracticeItem[]
+  resources     ResourceLink[]
 
   prerequisites  Topic[] @relation("TopicPrerequisites")
   prerequisiteOf Topic[] @relation("TopicPrerequisites")
@@ -110,6 +111,19 @@ model Snippet {
   code        String
   explanation String
   pitfall     String?
+  position    Int     @default(0)
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, position])
+}
+
+model ResourceLink {
+  id          String  @id @default(cuid())
+  topicId     String
+  title       String
+  url         String
+  description String?
   position    Int     @default(0)
 
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)

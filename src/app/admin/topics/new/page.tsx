@@ -35,6 +35,7 @@ const DEFAULT_VALUES: CreateTopicFormInput = {
   analogy: null,
   questions: [],
   snippets: [],
+  resources: [],
   practice: [],
 };
 
@@ -109,6 +110,7 @@ export function TopicForm({
   const details = useFieldArray({ control, name: "details" });
   const questions = useFieldArray({ control, name: "questions" });
   const snippets = useFieldArray({ control, name: "snippets" });
+  const resources = useFieldArray({ control, name: "resources" });
   const practice = useFieldArray({ control, name: "practice" });
 
   const title = watch("title");
@@ -474,6 +476,51 @@ export function TopicForm({
               </div>
             );
           })}
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-slate-950">Resources</h2>
+            <button
+              type="button"
+              onClick={() => resources.append({ title: "", url: "", description: "" })}
+              className="text-sm font-semibold text-amber-700"
+            >
+              + Add resource
+            </button>
+          </div>
+          <p className="text-sm text-slate-500">Add useful articles, documentation, and other links for this topic.</p>
+          {resources.fields.map((item, index) => (
+            <div key={item.id} className="space-y-3 border border-slate-200 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <input
+                  {...register(`resources.${index}.title`)}
+                  placeholder="Resource title"
+                  className={`${inputClass} font-semibold`}
+                />
+                <button type="button" onClick={() => resources.remove(index)} className="text-sm text-red-700">
+                  Remove
+                </button>
+              </div>
+              {errors.resources?.[index]?.title && (
+                <p className="text-xs text-red-700">{errors.resources[index].title.message}</p>
+              )}
+              <Field label="URL">
+                <input
+                  type="url"
+                  {...register(`resources.${index}.url`)}
+                  placeholder="https://example.com"
+                  className={inputClass}
+                />
+                {errors.resources?.[index]?.url && (
+                  <p className="text-xs text-red-700">{errors.resources[index].url.message}</p>
+                )}
+              </Field>
+              <Field label="Description (optional)">
+                <textarea {...register(`resources.${index}.description`)} rows={2} className={inputClass} />
+              </Field>
+            </div>
+          ))}
         </section>
 
         <section className="space-y-4">
